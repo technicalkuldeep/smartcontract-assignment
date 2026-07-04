@@ -199,3 +199,4 @@ You are also evaluated on:
   - Any tradeoffs or decisions worth noting
 - Make sure `npm install` → `npm run chain` (separate terminal) → `npm run deploy` → `npm run dev` works end-to-end
 
+
