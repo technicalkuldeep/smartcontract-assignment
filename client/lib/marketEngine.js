@@ -249,7 +249,123 @@ export class MarketEngine extends EventEmitter {
     const m = this.inner.get(id);
     if (!m) return null;
     const qd = quoteDp(m.quote);
-    return { ...MarketEngine.toPublic(m), book: MarketEngine.buildBook(m.price, qd), trades: [...m.trades], candles: [...m.candles] };
+
+    return {
+      ...MarketEngine.toPublic(m),
+      book: MarketEngine.buildBook(m.price, qd),
+      trades: [...m.trades],
+      candles: [...m.candles],
+    };
+  }
+
+  candles(id, timeframe = "5m", limit = 100) {
+    const m = this.inner.get(id);
+    if (!m) return null;
+
+    const source = [...m.candles];
+
+    let result;
+
+    switch (timeframe) {
+      case "1m":
+        result = MarketEngine.expandToOneMinute(source);
+        break;
+
+      case "5m":
+        result = source;
+        break;
+
+      case "15m":
+        result = MarketEngine.aggregateCandles(source, 15 * 60);
+        break;
+
+      case "1h":
+        result = MarketEngine.aggregateCandles(source, 60 * 60);
+        break;
+
+      default:
+        return null;
+    }
+
+    return result.slice(-limit);
+  }
+
+  static aggregateCandles(candles, intervalSeconds) {
+    if (!Array.isArray(candles) || candles.length === 0) {
+      return [];
+    }
+
+    const buckets = new Map();
+
+    for (const candle of candles) {
+      const bucketStart =
+        Math.floor(candle.t / intervalSeconds) * intervalSeconds;
+
+      const existing = buckets.get(bucketStart);
+
+      if (!existing) {
+        buckets.set(bucketStart, {
+          t: bucketStart,
+          o: candle.o,
+          h: candle.h,
+          l: candle.l,
+          c: candle.c,
+          v: candle.v,
+        });
+
+        continue;
+      }
+
+      existing.h = Math.max(existing.h, candle.h);
+      existing.l = Math.min(existing.l, candle.l);
+      existing.c = candle.c;
+      existing.v += candle.v;
+    }
+
+    return [...buckets.values()].sort((a, b) => a.t - b.t);
+  }
+
+  static expandToOneMinute(candles) {
+    if (!Array.isArray(candles) || candles.length === 0) {
+      return [];
+    }
+
+    const result = [];
+
+    for (const candle of candles) {
+      const priceRange = candle.c - candle.o;
+
+      for (let i = 0; i < 5; i++) {
+        const minuteOpen =
+          candle.o + priceRange * (i / 5);
+
+        const minuteClose =
+          candle.o + priceRange * ((i + 1) / 5);
+
+        result.push({
+          t: candle.t + i * 60,
+          o: minuteOpen,
+          h: Math.max(
+            minuteOpen,
+            minuteClose,
+            i === 2
+              ? candle.h
+              : Math.max(minuteOpen, minuteClose),
+          ),
+          l: Math.min(
+            minuteOpen,
+            minuteClose,
+            i === 2
+              ? candle.l
+              : Math.min(minuteOpen, minuteClose),
+          ),
+          c: minuteClose,
+          v: candle.v / 5,
+        });
+      }
+    }
+
+    return result;
   }
 
   static buildBook(mid, quoteDecimals) {

@@ -1,0 +1,61 @@
+{
+  "orders": [
+    {
+      "id": "bae98937-2cef-4056-a1e4-df9462304106",
+      "market_id": "btc-usdt",
+      "side": "buy",
+      "order_type": "market",
+      "price": null,
+      "size_original": 0.001,
+      "size_remaining": 0,
+      "status": "cancelled",
+      "created_at": 1783563723
+    },
+    {
+      "id": "66e05b81-00be-49d4-8173-e488d077584d",
+      "market_id": "btc-usdt",
+      "side": "buy",
+      "order_type": "limit",
+      "price": 60000,
+      "size_original": 0.001,
+      "size_remaining": 0.001,
+      "status": "open",
+      "created_at": 1783563997
+    },
+    {
+      "id": "c773ef82-1142-4adb-80cd-4d669d65b83a",
+      "market_id": "btc-usdt",
+      "side": "buy",
+      "order_type": "limit",
+      "price": 60000,
+      "size_original": 0.001,
+      "size_remaining": 0.001,
+      "status": "open",
+      "created_at": 1783564013
+    },
+    {
+      "id": "63868d3b-effd-4cb8-8847-1141cc63a05c",
+      "market_id": "btc-usdt",
+      "side": "buy",
+      "order_type": "limit",
+      "price": 50000,
+      "size_original": 2.5,
+      "size_remaining": 2.5,
+      "status": "open",
+      "created_at": 1783573187
+    },
+    {
+      "id": "abd654a5-57a4-424a-83f4-18ef35a0b34c",
+      "market_id": "btc-usdt",
+      "side": "buy",
+      "order_type": "market",
+      "price": null,
+      "size_original": 0.001,
+      "size_remaining": 0,
+      "status": "cancelled",
+      "created_at": 1783573492
+    }
+  ],
+  "trades": [],
+  "next_trade_id": 1
+}
