@@ -1,5 +1,265 @@
 # ZyncSwap — Smart Contract Assessment
 
+
+## Assessment Solution
+
+This repository contains my implementation of the ZyncSwap Blockchain Developer Assessment.
+
+### Completed Tasks
+
+#### Task 1 — Order Submission Bug Fix
+
+Fixed the trading flow so that both market and limit orders are submitted from the frontend to:
+
+`POST /api/v1/orders`
+
+The request now flows through the frontend, Next.js API route, and the existing matching engine.
+
+Tested with both:
+
+- Market orders
+- Limit orders
+
+#### Task 2 — OHLCV Candles API
+
+Added the following endpoint:
+
+`GET /api/v1/markets/:id/candles?timeframe=5m&limit=100`
+
+Supported timeframes:
+
+- `1m`
+- `5m`
+- `15m`
+- `1h`
+
+The endpoint:
+
+- Returns OHLCV candle data for the requested market.
+- Supports a maximum limit of 500 candles.
+- Returns `400 Bad Request` with clear error messages for invalid timeframe or limit values.
+- Returns `404 Not Found` for an unknown market.
+
+#### Task 3 — Portfolio Panel
+
+Added a Portfolio panel to the `/markets` page.
+
+The panel displays open paper-trade positions stored through the existing `PaperTradeContext` and browser `localStorage`.
+
+For each position, it shows:
+
+- Trading pair
+- Position side (`long` or `short`)
+- Entry price
+- Current mark price
+- Unrealised PnL
+
+The current mark price is taken from the existing WebSocket market feed. As new market ticks arrive, the mark price and unrealised PnL update automatically without requiring a page refresh.
+
+PnL is calculated as:
+
+For long positions:
+
+`(markPrice - entryPrice) × sizeBase`
+
+For short positions:
+
+`(entryPrice - markPrice) × sizeBase`
+
+#### Task 4 — Smart Contract Burn Functionality
+
+Extended `ZyncToken.sol` with:
+
+- `burn(uint256 amount)` — allows token holders to burn their own tokens.
+- `burnFrom(address account, uint256 amount)` — allows approved spenders to burn tokens using the ERC-20 allowance mechanism.
+- `Burned(address indexed from, uint256 amount)` event.
+
+Added contract tests covering:
+
+- Successful burn.
+- Burn exceeding the holder's balance.
+- `burnFrom` with sufficient allowance.
+- `burnFrom` without allowance.
+
+All 5 smart contract tests, including the existing minting test, are passing.
+
+---
+
+## How to Run the Solution
+
+### Requirements
+
+Make sure the following are installed:
+
+- Node.js 18 or later
+- npm
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/technicalkuldeep/smartcontract-assignment.git
+cd smartcontract-assignment
+````
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Set up environment variables
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+On Windows PowerShell, you can use:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+### 4. Start the local Hardhat blockchain
+
+Open a terminal and run:
+
+```bash
+npm run chain
+```
+
+Keep this terminal running.
+
+### 5. Deploy the ZYNC token
+
+Open another terminal and run:
+
+```bash
+npm run deploy
+```
+
+Copy the deployed `ZyncToken` contract address printed in the terminal and set it in `.env`:
+
+```env
+ZYNC_TOKEN_ADDRESS=YOUR_DEPLOYED_CONTRACT_ADDRESS
+```
+
+### 6. Start the application
+
+Open another terminal and run:
+
+```bash
+npm run dev
+```
+
+The application will be available at:
+
+`http://localhost:3000`
+
+### 7. Run smart contract tests
+
+```bash
+npm run test:contracts
+```
+
+Expected result:
+
+`5 passing`
+
+### 8. Create a production build
+
+```bash
+npm run client:build
+```
+
+---
+
+## Tradeoffs and Decisions
+
+### Reused the Existing Architecture
+
+I reused the project's existing `PaperTradeContext`, `MarketsStreamContext`, matching engine, and market engine instead of introducing duplicate state-management or WebSocket logic.
+
+This keeps the implementation consistent with the existing architecture and reduces unnecessary complexity.
+
+### Portfolio PnL Calculation
+
+Unrealised PnL is calculated client-side using the position's entry price, size, side, and the latest mark price received from the existing WebSocket market feed.
+
+This allows the Portfolio panel to update in real time without creating an additional WebSocket connection.
+
+### Candle Timeframes
+
+The existing market engine primarily provides 5-minute candle data. The implementation uses this existing candle data as the source for additional supported timeframes.
+
+The `15m` and `1h` candles are aggregated from the available lower-timeframe candles.
+
+The `1m` candles are derived from the existing 5-minute candle data. This was chosen to satisfy the requested API interface while staying within the existing architecture and assessment time constraints.
+
+For a production system, I would prefer to store or consume genuine 1-minute OHLCV data rather than derive synthetic 1-minute candles.
+
+---
+
+## What I Would Improve With More Time
+
+Given more time, I would focus on the following improvements:
+
+1. **Native 1-minute market data**
+
+   Use genuine 1-minute OHLCV data as the base candle timeframe, then aggregate it into `5m`, `15m`, and `1h` candles. This would provide more accurate market data than deriving 1-minute candles from existing 5-minute data.
+
+2. **More comprehensive API tests**
+
+   Add automated tests for the candles endpoint covering:
+
+   * All supported timeframes.
+   * Invalid timeframe values.
+   * Invalid limits.
+   * Unknown markets.
+   * Boundary values such as `limit=1` and `limit=500`.
+
+3. **More precise smart contract revert tests**
+
+   Assert the exact OpenZeppelin custom errors for insufficient balances and allowances instead of only checking that the transaction reverted.
+
+4. **Portfolio improvements**
+
+   Add features such as:
+
+   * Total unrealised PnL.
+   * Position size.
+   * Margin information.
+   * Close-position actions.
+   * Filtering and sorting.
+
+5. **Additional end-to-end testing**
+
+   Add automated tests covering the complete order flow from frontend submission through the API route and matching engine.
+
+---
+
+## Verification
+
+The implementation was manually tested for:
+
+* Market order submission.
+* Limit order submission.
+* All four candle timeframes.
+* Invalid candle timeframe handling.
+* Invalid candle limit handling.
+* Portfolio position rendering.
+* Real-time mark price updates.
+* Real-time unrealised PnL updates.
+* Smart contract burn functionality.
+* Smart contract allowance-based `burnFrom` functionality.
+
+Smart contract test result:
+
+`5 passing`
+
+---
+
 Welcome to the ZyncSwap Blockchain Developer Assessment!
 
 ZyncSwap is a decentralised exchange platform built around the **ZYNC** utility token. It includes a Next.js frontend, server-side API routes, a WebSocket market feed, an on-chain ERC-20 token, and an off-chain order matching engine.
