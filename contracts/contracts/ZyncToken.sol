@@ -7,7 +7,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title ZyncToken — ZYNC utility token for AureLexa (Zync)
 /// @notice Public mint: send ETH at `mintPriceWei` per 1 full token (18 decimals).
-///         Owner can treasury-mint, set price, and withdraw sale proceeds.
+///         Owner can treasury-mint, set price, withdraw sale proceeds,
+///         and token holders can burn their own tokens or approved tokens.
 contract ZyncToken is ERC20, Ownable, ReentrancyGuard {
     uint256 public constant MAX_SUPPLY = 1_000_000_000 * 10 ** 18;
 
@@ -17,7 +18,15 @@ contract ZyncToken is ERC20, Ownable, ReentrancyGuard {
     error CapExceeded();
     error ZeroAmount();
 
-    constructor(uint256 initialMintPriceWei) ERC20("Zync", "ZYNC") Ownable(msg.sender) {
+    /// @notice Emitted whenever ZYNC tokens are burned.
+    /// @param from Address whose tokens were burned.
+    /// @param amount Number of tokens burned.
+    event Burned(address indexed from, uint256 amount);
+
+    constructor(uint256 initialMintPriceWei)
+        ERC20("Zync", "ZYNC")
+        Ownable(msg.sender)
+    {
         mintPriceWei = initialMintPriceWei;
     }
 
@@ -37,21 +46,46 @@ contract ZyncToken is ERC20, Ownable, ReentrancyGuard {
         if (msg.value == 0) revert ZeroAmount();
 
         uint256 tokenAmount = (msg.value * 10 ** 18) / mintPriceWei;
+
         if (tokenAmount == 0) revert ZeroAmount();
-        if (totalSupply() + tokenAmount > MAX_SUPPLY) revert CapExceeded();
+
+        if (totalSupply() + tokenAmount > MAX_SUPPLY) {
+            revert CapExceeded();
+        }
 
         uint256 costWei = (tokenAmount * mintPriceWei) / 10 ** 18;
+
         _mint(msg.sender, tokenAmount);
 
         uint256 refund = msg.value - costWei;
+
         if (refund > 0) {
             (bool ok, ) = payable(msg.sender).call{value: refund}("");
             require(ok, "refund failed");
         }
     }
 
+    /// @notice Burns tokens belonging to the caller.
+    /// @param amount Number of tokens to burn.
+    function burn(uint256 amount) external {
+        _burn(msg.sender, amount);
+        emit Burned(msg.sender, amount);
+    }
+
+    /// @notice Burns tokens from another account using the ERC-20 allowance mechanism.
+    /// @param account Address whose tokens will be burned.
+    /// @param amount Number of tokens to burn.
+    function burnFrom(address account, uint256 amount) external {
+        _spendAllowance(account, msg.sender, amount);
+        _burn(account, amount);
+        emit Burned(account, amount);
+    }
+
     function withdraw() external onlyOwner nonReentrant {
-        (bool ok, ) = payable(owner()).call{value: address(this).balance}("");
+        (bool ok, ) = payable(owner()).call{
+            value: address(this).balance
+        }("");
+
         require(ok, "withdraw failed");
     }
 
